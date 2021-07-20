@@ -1,0 +1,136 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  MirrorServiceRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: "codebuild-container-mirror-service-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "codebuild.amazonaws.com.cn" 
+            Action: 
+              - "sts:AssumeRole"
+      Path: "/service-role/"
+      ManagedPolicyArns:
+        - "arn:aws-cn:iam::aws:policy/AmazonSSMReadOnlyAccess"
+        - "arn:aws-cn:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+      Policies:
+        - PolicyName: "CodeBuildContainerMirror"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource:
+                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/container-mirror'
+                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/container-mirror:*'
+              - Effect: "Allow"
+                Action:
+                  - "s3:PutObject"
+                  - "s3:GetObject"
+                  - "s3:GetObjectVersion"
+                  - "s3:GetBucketAcl"
+                  - "s3:GetBucketLocation"
+                Resource:
+                  - "arn:aws-cn:s3:::codepipeline-*"
+              - Effect: "Allow"
+                Action:
+                  - "codebuild:CreateReportGroup"
+                  - "codebuild:CreateReport"
+                  - "codebuild:UpdateReport"
+                  - "codebuild:BatchPutTestCases"
+                Resource:
+                  - !Sub 'arn:aws-cn:codebuild::${AWS::AccountId}:report-group/container-mirror-*'
+  RootInstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/"
+      Roles:
+        - Ref: "MirrorServiceRole"
+  Project:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: container-mirror
+      ServiceRole: !GetAtt MirrorServiceRole.Arn
+      BadgeEnabled: true
+      Artifacts:
+        Type: no_artifacts
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+        PrivilegedMode: true
+      Source:
+        Auth:
+          Type: OAUTH
+        Location: !Ref RepositoryURL
+        Type: GITHUB
+        BuildSpec: buildspec.yml
+      Triggers:
+        Webhook: true
+        FilterGroups: 
+          - - Type: EVENT
+              Pattern: PUSH
+      TimeoutInMinutes: 480
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+  StartCodeBuildRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: "codebuild-container-mirror-trigger-service-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "events.amazonaws.com.cn" 
+            Action: 
+              - "sts:AssumeRole"
+      Path: "/service-role/"
+      Policies:
+        - PolicyName: "CodeBuildContainerMirrorTrigger"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "codebuild:StartBuild"
+                Resource:
+                  - !GetAtt Project.Arn
+  AKParameter:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: "China-ECR-AK"
+      Type: "String"
+      Value: !Ref AWSChinaAK
+  SKParameter:
+    Type: "AWS::SSM::Parameter"
+    Properties:
+      Name: "China-ECR-SK"
+      Type: "String"
+      Value: !Ref AWSChinaSK
+Parameters:
+  RepositoryURL:
+    Description: GitHub Repository URL,https://github.com/<user-name>/<repository-name>
+    Type: String
+    MinLength: 20
+  AWSChinaAK:
+    NoEcho: true
+    Description: "AWS Global Access Key ID"
+    Type: String
+    MinLength: 20
+    MaxLength: 20
+  AWSChinaSK:
+    NoEcho: true
+    Description: "AWS Global Secret Access Key"
+    Type: String
+    MinLength: 40
+    MaxLength: 40
