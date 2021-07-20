@@ -108,27 +108,27 @@ Resources:
   AKParameter:
     Type: "AWS::SSM::Parameter"
     Properties:
-      Name: "China-ECR-AK"
+      Name: "Global-ECR-AK"
       Type: "String"
-      Value: !Ref AWSChinaAK
+      Value: !Ref AWSGlobalAK
   SKParameter:
     Type: "AWS::SSM::Parameter"
     Properties:
-      Name: "China-ECR-SK"
+      Name: "Global-ECR-SK"
       Type: "String"
-      Value: !Ref AWSChinaSK
+      Value: !Ref AWSGlobalSK
 Parameters:
   RepositoryURL:
     Description: GitHub Repository URL,https://github.com/<user-name>/<repository-name>
     Type: String
     MinLength: 20
-  AWSChinaAK:
+  AWSGlobalAK:
     NoEcho: true
     Description: "AWS Global Access Key ID"
     Type: String
     MinLength: 20
     MaxLength: 20
-  AWSChinaSK:
+  AWSGlobalSK:
     NoEcho: true
     Description: "AWS Global Secret Access Key"
     Type: String
