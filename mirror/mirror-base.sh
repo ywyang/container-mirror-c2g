@@ -86,9 +86,12 @@ function inArray() {
 }
 
 function loginEcr() {
-  aws --profile=GlobalECR ecr --region us-west-1 get-login --no-include-email | sh
+  #aws --profile=GlobalECR ecr --region us-west-1 get-login --no-include-email | sh
+  #aws ecr get-login --region cn-northwest-1 --registry-ids  856654148726 --no-include-email | sh
+  
+  aws --profile=GlobalECR ecr --region us-west-1 get-login-password  | sh
   #aws --profile=GlobalECR ecr --region cn-north-1 get-login --no-include-email | sh
-  aws ecr get-login --region cn-northwest-1 --registry-ids  856654148726 --no-include-email | sh
+  aws ecr get-login-password --region cn-northwest-1  | sh
 }
 
 function pullAndPush(){
